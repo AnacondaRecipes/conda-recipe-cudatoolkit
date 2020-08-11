@@ -120,7 +120,7 @@ config['cuda_static_libraries'] = [
     'cudadevrt'
 ]
 # nvjpeg is only available on linux
-if sys.platform.startswith('linux'):
+if sys.platform.startswith('linux') and platform.machine() != 'aarch64':
     config['cuda_libraries'].append('nvjpeg')
 config['libdevice_versions'] = ['10']
 
@@ -149,6 +149,7 @@ config['windows'] = {'blob': 'cuda_10.2.89_441.22_windows.exe',
                        os.path.join('c:' + os.sep, 'Program Files',
                                     'NVIDIA Corporation', 'NVToolsExt', 'bin')
                    }
+
 
 
 class Extractor(object):
@@ -458,9 +459,142 @@ class LinuxExtractor(Extractor):
                 check_call(cmd)
             self.copy(tmpd)
 
+class DebExtractor(Extractor):
+    '''
+    Extract all of the libraries from a Debian repository file
+    '''
+    def __init__(self, version, ver_config, plt_config):
 
+        super(DebExtractor, self).__init__(version, ver_config, plt_config)
+        self.config_blob = os.environ['DEB_FILE']
+
+
+    def download_blobs(self):
+        # Need to overwrite this super, for now a debfile is passed through the
+        # command line, in the future the debfile may be downloaded
+        # directly from the package manager
+        print("Using local deb archive {}".format(self.config_blob))
+        return
+
+    def check_md5(self):
+        # Need to overwrite this super also, debfile md5s will need to be found
+        return
+
+    def copy(self,*args):
+        # Need a method to move CUDA files from the extracted archive to
+        # the Anaconda lib environment
+
+        # assemble a list of all of the binary files extracted
+        # from the archive
+        basepath = args[0]
+
+        sos = {}
+        for path, dirs, files in os.walk(basepath):
+            for filename in files:
+                if '.so' in filename and '/doc/' not in path:
+                    if filename not in sos.keys(): sos[filename] = os.path.join(path,filename)
+
+        self.copy_files(sos)
+
+    def get_paths(self,libraries, file_dict, template):
+        # An override of the runfile get_paths that work for traversing
+        # an entire directory, not just looking in one folder
+        pathlist = []
+        for libname in libraries:
+            filename = template.format(libname)
+            paths = fnmatch.filter(file_dict.keys(), filename)
+
+            if not paths:
+                # Paths was empty for this library, we need this library
+                msg = ("Cannot find item: %s, looked for %s" %
+                       (libname, filename))
+                raise RuntimeError(msg)
+
+            if (not self.symlinks) and (len(paths) != 1):
+                msg = ("Aliasing present for item: %s, looked for %s" %
+                       (libname, filename))
+                msg += ". Found: \n"
+                msg += ', \n'.join([str(x) for x in paths])
+                raise RuntimeError(msg)
+
+            pathsforlib = []
+            for path in paths:
+                tmppath = file_dict[path]
+                assert os.path.isfile(tmppath), 'missing {0}'.format(tmppath)
+                pathsforlib.append(tmppath)
+            
+            if self.symlinks: # deal with symlinked items
+                # get all DSOs
+                concrete_dsos = [x for x in pathsforlib
+                                 if not os.path.islink(x)]
+                # find the most recent library version by name
+                target_library = max(concrete_dsos)
+                # remove this from the list of concrete_dsos
+                # all that remains are DSOs that are not wanted
+                concrete_dsos.remove(target_library)
+                # drop the unwanted DSOs from the paths
+                [pathsforlib.remove(x) for x in concrete_dsos]
+
+            pathlist.extend(pathsforlib)
+        return pathlist
+
+
+    def copy_files(self, file_dict):
+
+        # previously we've assembled a dictionary of all of the binary
+        # files and their filepaths, go through and extract the libraries
+        # and handle the symbolic links
+        cudalibs =  [x for x in self.cuda_libraries]
+        filepaths = self.get_paths(cudalibs, file_dict,  self.cuda_lib_fmt)
+
+        for fn in filepaths:
+            if os.path.islink(fn):
+                # replicate symlinks
+                symlinktarget = os.readlink(fn)
+                targetname = os.path.basename(fn)
+                symlink = os.path.join(self.output_dir, targetname)
+                print('linking %s to %s' % (symlinktarget, symlink))
+                os.symlink(symlinktarget, symlink)
+            else:
+                print('copying %s to %s' % (fn, self.output_dir))
+                shutil.copy(fn, self.output_dir)
+
+            
+
+
+    def extract(self):
+
+        # Use dpkg to extract the libraries from a CUDA deb file
+
+        debfile = os.path.abspath(self.config_blob)
+
+        with tempdir() as tmpd:
+
+            extractdir = os.path.join(tmpd,"__extracted")
+
+            cmd = ['dpkg', '-x', debfile, extractdir]
+
+            # Extract the main deb archive
+            check_call(cmd)
+
+            # walk the extraction looking for more deb files embedded
+            for path, dirs, files in os.walk(extractdir):
+                for filename in files:
+                    if filename.lower().endswith('.deb'):
+                        cmd = ['dpkg',
+                                 '-x',
+                                os.path.join(path,filename),
+                                extractdir]
+                        check_call(cmd)
+
+            self.copy(tmpd)
+
+    
+
+        
 
 def getplatform():
+
     plt = sys.platform
     if plt.startswith('linux'):
         return 'linux'
@@ -469,7 +603,8 @@ def getplatform():
     else:
         raise RuntimeError('Unknown platform')
 
-dispatcher = {'linux': LinuxExtractor, 'windows': WindowsExtractor}
+dispatcher = {'linux': LinuxExtractor, 
+              'windows': WindowsExtractor}
 
 
 def _main():
@@ -484,7 +619,12 @@ def _main():
 
     # get an extractor
     plat = getplatform()
-    extractor_impl = dispatcher[plat]
+
+    if os.environ.get('DEB_FILE', None) is not None:
+        extractor_impl = DebExtractor
+    else:
+        extractor_impl = dispatcher[plat]
+        
     extractor = extractor_impl(config_version, config, config[plat])
 
     # download binaries
