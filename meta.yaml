@@ -15,7 +15,6 @@ build:
   script_env:
     - NVTOOLSEXT_INSTALL_PATH
     - DEBUG_INSTALLER_PATH
-    - DEB_FILE
   missing_dso_whitelist:
     - "$RPATH/libdl.so.2"
     - "$RPATH/libpthread.so.0"

@@ -23,24 +23,30 @@ def download_from_url(url, dst):
     @param: url to download file
     @param: dst place to put the file
     """
-    file_size = int(requests.head(url).headers["Content-Length"])
+    file_size = requests.head(url).headers.get("content-length",None)
+    if file_size: file_size = int(file_size)
     if os.path.exists(dst):
         first_byte = os.path.getsize(dst)
     else:
         first_byte = 0
-    if first_byte >= file_size:
+    if file_size and first_byte >= file_size:
         return file_size
-    header = {"Range": "bytes=%s-%s" % (first_byte, file_size)}
-    pbar = tqdm(
-        total=file_size, initial=first_byte,
-        unit='B', unit_scale=True, desc=url.split('/')[-1])
-    req = requests.get(url, headers=header, stream=True)
+
+    if file_size:
+        header = {"Range": "bytes=%s-%s" % (first_byte, file_size)}
+        pbar = tqdm(
+            total=file_size, initial=first_byte,
+            unit='B', unit_scale=True, desc=url.split('/')[-1])
+
+    req = requests.get(url, stream=True)
+    
     with(open(dst, 'ab')) as f:
         for chunk in req.iter_content(chunk_size=1024):
             if chunk:
                 f.write(chunk)
-                pbar.update(1024)
-        pbar.close()
+                if file_size: 
+                    pbar.update(1024)
+                    pbar.close()
     return file_size
 
 def md5(fname):
@@ -138,6 +144,19 @@ config['linux'] = {
     'libdevice_lib_fmt': 'libdevice.{0}.bc'
 }
 
+config['linux-aarch64'] = {
+    'blob': 'l4t_cuda.yaml',
+    'embedded_blob': None,
+    'patches': [],
+    # need globs to handle symlinks
+    'cuda_lib_fmt': 'lib{0}.so*',
+    'cuda_static_lib_fmt': 'lib{0}.a',
+    'nvtoolsext_fmt': 'lib{0}.so*',
+    'nvvm_lib_fmt': 'lib{0}.so*',
+    'libdevice_lib_fmt': 'libdevice.{0}.bc'
+}
+
+
 config['windows'] = {'blob': 'cuda_10.2.89_441.22_windows.exe',
                    'patches': [],
                    'cuda_lib_fmt': '{0}64_10*.dll',
@@ -158,6 +177,7 @@ class Extractor(object):
     """
 
     libdir = {'linux': 'lib',
+              'linux-aarch64': 'lib',
               'windows': 'Library/bin'}
 
     def __init__(self, version, ver_config, plt_config):
@@ -188,7 +208,7 @@ class Extractor(object):
         self.prefix = os.environ['PREFIX']
         self.src_dir = os.environ['SRC_DIR']
         self.output_dir = os.path.join(self.prefix, self.libdir[getplatform()])
-        self.symlinks = getplatform() == 'linux'
+        self.symlinks = 'linux' in getplatform()
         self.debug_install_path = os.environ.get('DEBUG_INSTALLER_PATH')
 
         try:
@@ -466,18 +486,44 @@ class DebExtractor(Extractor):
     def __init__(self, version, ver_config, plt_config):
 
         super(DebExtractor, self).__init__(version, ver_config, plt_config)
-        self.config_blob = os.environ['DEB_FILE']
 
 
     def download_blobs(self):
         # Need to overwrite this super, for now a debfile is passed through the
         # command line, in the future the debfile may be downloaded
         # directly from the package manager
-        print("Using local deb archive {}".format(self.config_blob))
+        print("Extracting download sources from {}".format(self.config_blob))
+
+        with open(self.config_blob,'r') as thefile:
+            deb_sources = yaml.load(thefile)
+
+        try:
+            os.mkdir(os.path.join(self.src_dir,'deb_archives'))
+        except FileExistsError:
+            pass
+        
+        for package in deb_sources.keys():
+            if deb_sources[package]['link']:
+                dl_url = deb_sources[package]['link']
+                dl_path = os.path.join(self.src_dir,'deb_archives', deb_sources[package]['name'])
+                print("downloading %s to %s" % (dl_url, dl_path))
+                download_from_url(dl_url, dl_path)
         return
 
     def check_md5(self):
-        # Need to overwrite this super also, debfile md5s will need to be found
+        # Need to overwrite this super also, debfile md5s are included in
+        # download yaml created by download_links.py
+        
+        with open(self.config_blob,'r') as thefile:
+            deb_sources = yaml.load(thefile)
+
+        for package in deb_sources.keys():
+            if deb_sources[package]['md5']:
+                dl_path = os.path.join(self.src_dir,'deb_archives', deb_sources[package]['name'])
+                md5sum = md5(dl_path)
+                assert md5sum.startswith(deb_sources[package]['md5'][:-7])
+                
+
         return
 
     def copy(self,*args):
@@ -493,6 +539,7 @@ class DebExtractor(Extractor):
             for filename in files:
                 if '.so' in filename and '/doc/' not in path:
                     if filename not in sos.keys(): sos[filename] = os.path.join(path,filename)
+
 
         self.copy_files(sos)
 
@@ -566,19 +613,12 @@ class DebExtractor(Extractor):
 
         # Use dpkg to extract the libraries from a CUDA deb file
 
-        debfile = os.path.abspath(self.config_blob)
-
         with tempdir() as tmpd:
 
             extractdir = os.path.join(tmpd,"__extracted")
 
-            cmd = ['dpkg', '-x', debfile, extractdir]
-
-            # Extract the main deb archive
-            check_call(cmd)
-
             # walk the extraction looking for more deb files embedded
-            for path, dirs, files in os.walk(extractdir):
+            for path, dirs, files in os.walk(self.src_dir):
                 for filename in files:
                     if filename.lower().endswith('.deb'):
                         cmd = ['dpkg',
@@ -597,13 +637,17 @@ def getplatform():
 
     plt = sys.platform
     if plt.startswith('linux'):
-        return 'linux'
+        if platform.machine() != 'aarch64':
+            return 'linux'
+        else:
+            return 'linux-aarch64'
     elif plt.startswith('win'):
         return 'windows'
     else:
         raise RuntimeError('Unknown platform')
 
 dispatcher = {'linux': LinuxExtractor, 
+              'linux-aarch64':DebExtractor,
               'windows': WindowsExtractor}
 
 
@@ -619,11 +663,7 @@ def _main():
 
     # get an extractor
     plat = getplatform()
-
-    if os.environ.get('DEB_FILE', None) is not None:
-        extractor_impl = DebExtractor
-    else:
-        extractor_impl = dispatcher[plat]
+    extractor_impl = dispatcher[plat]
         
     extractor = extractor_impl(config_version, config, config[plat])
 
