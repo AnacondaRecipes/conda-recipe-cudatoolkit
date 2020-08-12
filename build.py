@@ -46,7 +46,7 @@ def download_from_url(url, dst):
                 f.write(chunk)
                 if file_size: 
                     pbar.update(1024)
-                    pbar.close()
+        if pbar: pbar.close()
     return file_size
 
 def md5(fname):
