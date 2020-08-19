@@ -23,24 +23,31 @@ def download_from_url(url, dst):
     @param: url to download file
     @param: dst place to put the file
     """
-    file_size = int(requests.head(url).headers["Content-Length"])
+    file_size = requests.head(url).headers.get("content-length",None)
+    if file_size: file_size = int(file_size)
     if os.path.exists(dst):
         first_byte = os.path.getsize(dst)
     else:
         first_byte = 0
-    if first_byte >= file_size:
+    if file_size and first_byte >= file_size:
         return file_size
-    header = {"Range": "bytes=%s-%s" % (first_byte, file_size)}
-    pbar = tqdm(
-        total=file_size, initial=first_byte,
-        unit='B', unit_scale=True, desc=url.split('/')[-1])
-    req = requests.get(url, headers=header, stream=True)
+
+    pbar = None
+    if file_size:
+        header = {"Range": "bytes=%s-%s" % (first_byte, file_size)}
+        pbar = tqdm(
+            total=file_size, initial=first_byte,
+            unit='B', unit_scale=True, desc=url.split('/')[-1])
+
+    req = requests.get(url, stream=True)
+    
     with(open(dst, 'ab')) as f:
         for chunk in req.iter_content(chunk_size=1024):
             if chunk:
                 f.write(chunk)
-                pbar.update(1024)
-        pbar.close()
+                if file_size: 
+                    pbar.update(1024)
+        if pbar: pbar.close()
     return file_size
 
 def md5(fname):
@@ -120,7 +127,7 @@ config['cuda_static_libraries'] = [
     'cudadevrt'
 ]
 # nvjpeg is only available on linux
-if sys.platform.startswith('linux'):
+if sys.platform.startswith('linux') and platform.machine() != 'aarch64':
     config['cuda_libraries'].append('nvjpeg')
 config['libdevice_versions'] = ['10']
 
@@ -138,6 +145,19 @@ config['linux'] = {
     'libdevice_lib_fmt': 'libdevice.{0}.bc'
 }
 
+config['linux-aarch64'] = {
+    'blob': 'l4t_cuda.yaml',
+    'embedded_blob': None,
+    'patches': [],
+    # need globs to handle symlinks
+    'cuda_lib_fmt': 'lib{0}.so*',
+    'cuda_static_lib_fmt': 'lib{0}.a',
+    'nvtoolsext_fmt': 'lib{0}.so*',
+    'nvvm_lib_fmt': 'lib{0}.so*',
+    'libdevice_lib_fmt': 'libdevice.{0}.bc'
+}
+
+
 config['windows'] = {'blob': 'cuda_10.2.89_441.22_windows.exe',
                    'patches': [],
                    'cuda_lib_fmt': '{0}64_10*.dll',
@@ -151,12 +171,14 @@ config['windows'] = {'blob': 'cuda_10.2.89_441.22_windows.exe',
                    }
 
 
+
 class Extractor(object):
     """Extractor base class, platform specific extractors should inherit
     from this class.
     """
 
     libdir = {'linux': 'lib',
+              'linux-aarch64': 'lib',
               'windows': 'Library/bin'}
 
     def __init__(self, version, ver_config, plt_config):
@@ -187,7 +209,7 @@ class Extractor(object):
         self.prefix = os.environ['PREFIX']
         self.src_dir = os.environ['SRC_DIR']
         self.output_dir = os.path.join(self.prefix, self.libdir[getplatform()])
-        self.symlinks = getplatform() == 'linux'
+        self.symlinks = 'linux' in getplatform()
         self.debug_install_path = os.environ.get('DEBUG_INSTALLER_PATH')
 
         try:
@@ -458,18 +480,176 @@ class LinuxExtractor(Extractor):
                 check_call(cmd)
             self.copy(tmpd)
 
+class DebExtractor(Extractor):
+    '''
+    Extract all of the libraries from a Debian repository file
+    '''
+    def __init__(self, version, ver_config, plt_config):
 
+        super(DebExtractor, self).__init__(version, ver_config, plt_config)
+
+
+    def download_blobs(self):
+        # Need to overwrite this super, for now a debfile is passed through the
+        # command line, in the future the debfile may be downloaded
+        # directly from the package manager
+        print("Extracting download sources from {}".format(self.config_blob))
+
+        with open(self.config_blob,'r') as thefile:
+            deb_sources = yaml.load(thefile)
+
+        try:
+            os.mkdir(os.path.join(self.src_dir,'deb_archives'))
+        except FileExistsError:
+            pass
+        
+        for package in deb_sources.keys():
+            if deb_sources[package]['link']:
+                dl_url = deb_sources[package]['link']
+                dl_path = os.path.join(self.src_dir,'deb_archives', deb_sources[package]['name'])
+                print("downloading %s to %s" % (dl_url, dl_path))
+                download_from_url(dl_url, dl_path)
+        return
+
+    def check_md5(self):
+        # Need to overwrite this super also, debfile md5s are included in
+        # download yaml created by download_links.py
+        
+        with open(self.config_blob,'r') as thefile:
+            deb_sources = yaml.load(thefile)
+
+        for package in deb_sources.keys():
+            if deb_sources[package]['md5']:
+                dl_path = os.path.join(self.src_dir,'deb_archives', deb_sources[package]['name'])
+                md5sum = md5(dl_path)
+                assert md5sum.startswith(deb_sources[package]['md5'][:-7])
+                
+
+        return
+
+    def copy(self,*args):
+        # Need a method to move CUDA files from the extracted archive to
+        # the Anaconda lib environment
+
+        # assemble a list of all of the binary files extracted
+        # from the archive
+        basepath = args[0]
+
+        sos = {}
+        for path, dirs, files in os.walk(basepath):
+            for filename in files:
+                if '.so' in filename and '/doc/' not in path:
+                    if filename not in sos.keys(): sos[filename] = os.path.join(path,filename)
+
+
+        self.copy_files(sos)
+
+    def get_paths(self,libraries, file_dict, template):
+        # An override of the runfile get_paths that work for traversing
+        # an entire directory, not just looking in one folder
+        pathlist = []
+        for libname in libraries:
+            filename = template.format(libname)
+            paths = fnmatch.filter(file_dict.keys(), filename)
+
+            if not paths:
+                # Paths was empty for this library, we need this library
+                msg = ("Cannot find item: %s, looked for %s" %
+                       (libname, filename))
+                raise RuntimeError(msg)
+
+            if (not self.symlinks) and (len(paths) != 1):
+                msg = ("Aliasing present for item: %s, looked for %s" %
+                       (libname, filename))
+                msg += ". Found: \n"
+                msg += ', \n'.join([str(x) for x in paths])
+                raise RuntimeError(msg)
+
+            pathsforlib = []
+            for path in paths:
+                tmppath = file_dict[path]
+                assert os.path.isfile(tmppath), 'missing {0}'.format(tmppath)
+                pathsforlib.append(tmppath)
+            
+            if self.symlinks: # deal with symlinked items
+                # get all DSOs
+                concrete_dsos = [x for x in pathsforlib
+                                 if not os.path.islink(x)]
+                # find the most recent library version by name
+                target_library = max(concrete_dsos)
+                # remove this from the list of concrete_dsos
+                # all that remains are DSOs that are not wanted
+                concrete_dsos.remove(target_library)
+                # drop the unwanted DSOs from the paths
+                [pathsforlib.remove(x) for x in concrete_dsos]
+
+            pathlist.extend(pathsforlib)
+        return pathlist
+
+
+    def copy_files(self, file_dict):
+
+        # previously we've assembled a dictionary of all of the binary
+        # files and their filepaths, go through and extract the libraries
+        # and handle the symbolic links
+        cudalibs =  [x for x in self.cuda_libraries]
+        filepaths = self.get_paths(cudalibs, file_dict,  self.cuda_lib_fmt)
+
+        for fn in filepaths:
+            if os.path.islink(fn):
+                # replicate symlinks
+                symlinktarget = os.readlink(fn)
+                targetname = os.path.basename(fn)
+                symlink = os.path.join(self.output_dir, targetname)
+                print('linking %s to %s' % (symlinktarget, symlink))
+                os.symlink(symlinktarget, symlink)
+            else:
+                print('copying %s to %s' % (fn, self.output_dir))
+                shutil.copy(fn, self.output_dir)
+
+            
+
+
+    def extract(self):
+
+        # Use dpkg to extract the libraries from a CUDA deb file
+
+        with tempdir() as tmpd:
+
+            extractdir = os.path.join(tmpd,"__extracted")
+
+            # walk the extraction looking for more deb files embedded
+            for path, dirs, files in os.walk(self.src_dir):
+                for filename in files:
+                    if filename.lower().endswith('.deb'):
+                        cmd = ['dpkg',
+                                 '-x',
+                                os.path.join(path,filename),
+                                extractdir]
+                        check_call(cmd)
+
+            self.copy(tmpd)
+
+    
+
+        
 
 def getplatform():
+
     plt = sys.platform
     if plt.startswith('linux'):
-        return 'linux'
+        if platform.machine() != 'aarch64':
+            return 'linux'
+        else:
+            return 'linux-aarch64'
     elif plt.startswith('win'):
         return 'windows'
     else:
         raise RuntimeError('Unknown platform')
 
-dispatcher = {'linux': LinuxExtractor, 'windows': WindowsExtractor}
+dispatcher = {'linux': LinuxExtractor, 
+              'linux-aarch64':DebExtractor,
+              'windows': WindowsExtractor}
 
 
 def _main():
@@ -485,6 +665,7 @@ def _main():
     # get an extractor
     plat = getplatform()
     extractor_impl = dispatcher[plat]
+        
     extractor = extractor_impl(config_version, config, config[plat])
 
     # download binaries

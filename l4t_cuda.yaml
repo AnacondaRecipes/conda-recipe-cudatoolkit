@@ -1,0 +1,207 @@
+# deb archives for CUDA 10.2 for Linux4Tegra 
+# information assembled using apt-cache depends <package>
+# and apt-get install --reinstall --print-uris -qq <package> 
+cuda-command-line-tools-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-command-line-tools-10-2_10.2.89-1_arm64.deb
+  md5: ce883c3f6e91a892813a954f32b62f6e
+  name: cuda-command-line-tools-10-2_10.2.89-1_arm64.deb
+  size: 2568
+cuda-compiler-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-compiler-10-2_10.2.89-1_arm64.deb
+  md5: e131e78b91ff3c27a2b7669771657919
+  name: cuda-compiler-10-2_10.2.89-1_arm64.deb
+  size: 2540
+cuda-cudart-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-cudart-10-2_10.2.89-1_arm64.deb
+  md5: 762a72876c1f3861af62e208f9e06229
+  name: cuda-cudart-10-2_10.2.89-1_arm64.deb
+  size: 94480
+cuda-cudart-dev-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-cudart-dev-10-2_10.2.89-1_arm64.deb
+  md5: a8f9ff0df267ebd917fb3497f50dd886
+  name: cuda-cudart-dev-10-2_10.2.89-1_arm64.deb
+  size: 458864
+cuda-cufft-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-cufft-10-2_10.2.89-1_arm64.deb
+  md5: a0fa230e8e95ddd3059d27f17c1f99c3
+  name: cuda-cufft-10-2_10.2.89-1_arm64.deb
+  size: 106603688
+cuda-cufft-dev-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-cufft-dev-10-2_10.2.89-1_arm64.deb
+  md5: 2b2f9e35c0fc66b2d7a58116798e14ec
+  name: cuda-cufft-dev-10-2_10.2.89-1_arm64.deb
+  size: 192713646
+cuda-cuobjdump-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-cuobjdump-10-2_10.2.89-1_arm64.deb
+  md5: 9d9f79966c55a4567ec23547377375f1
+  name: cuda-cuobjdump-10-2_10.2.89-1_arm64.deb
+  size: 78016
+cuda-cupti-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-cupti-10-2_10.2.89-1_arm64.deb
+  md5: e42a2e611aa1d4f273e298a7ba4287e8
+  name: cuda-cupti-10-2_10.2.89-1_arm64.deb
+  size: 3062470
+cuda-cupti-dev-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-cupti-dev-10-2_10.2.89-1_arm64.deb
+  md5: 83d534cc443127e092b56db689177768
+  name: cuda-cupti-dev-10-2_10.2.89-1_arm64.deb
+  size: 100934
+cuda-curand-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-curand-10-2_10.2.89-1_arm64.deb
+  md5: 439f37cc51be473b7a2214a633415122
+  name: cuda-curand-10-2_10.2.89-1_arm64.deb
+  size: 38872298
+cuda-curand-dev-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-curand-dev-10-2_10.2.89-1_arm64.deb
+  md5: 1cf68352b519919902238e3b6ef28528
+  name: cuda-curand-dev-10-2_10.2.89-1_arm64.deb
+  size: 39085658
+cuda-cusolver-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-cusolver-10-2_10.2.89-1_arm64.deb
+  md5: 0605b390c0d70bbd2392b048d690f672
+  name: cuda-cusolver-10-2_10.2.89-1_arm64.deb
+  size: 52274560
+cuda-cusolver-dev-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-cusolver-dev-10-2_10.2.89-1_arm64.deb
+  md5: cfe0b31229d492c09836925bc3e5fb50
+  name: cuda-cusolver-dev-10-2_10.2.89-1_arm64.deb
+  size: 15591892
+cuda-cusparse-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-cusparse-10-2_10.2.89-1_arm64.deb
+  md5: 24e9fe01bc4727819914109a94657389
+  name: cuda-cusparse-10-2_10.2.89-1_arm64.deb
+  size: 60131542
+cuda-cusparse-dev-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-cusparse-dev-10-2_10.2.89-1_arm64.deb
+  md5: 1d868cf320f5d888d888bf9a83593cf9
+  name: cuda-cusparse-dev-10-2_10.2.89-1_arm64.deb
+  size: 60356328
+cuda-documentation-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-documentation-10-2_10.2.89-1_arm64.deb
+  md5: 2acf8843fb421cffb859455e4a9e8d02
+  name: cuda-documentation-10-2_10.2.89-1_arm64.deb
+  size: 54081872
+cuda-driver-dev-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-driver-dev-10-2_10.2.89-1_arm64.deb
+  md5: 23a5791c85de135f13af7c027d136e71
+  name: cuda-driver-dev-10-2_10.2.89-1_arm64.deb
+  size: 8296
+cuda-gdb-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-gdb-10-2_10.2.89-1_arm64.deb
+  md5: 7039dc874f01f858c39def66b5c601b0
+  name: cuda-gdb-10-2_10.2.89-1_arm64.deb
+  size: 2134890
+cuda-libraries-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-libraries-10-2_10.2.89-1_arm64.deb
+  md5: 08975939946fd30dbc0b1cd16bca54b1
+  name: cuda-libraries-10-2_10.2.89-1_arm64.deb
+  size: 2588
+cuda-libraries-dev-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-libraries-dev-10-2_10.2.89-1_arm64.deb
+  md5: fc085f3c752dfeede2ef155fb06d3c93
+  name: cuda-libraries-dev-10-2_10.2.89-1_arm64.deb
+  size: 2614
+cuda-license-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-license-10-2_10.2.89-1_arm64.deb
+  md5: e43838663d07578a5ad4c19a4a0c25e9
+  name: cuda-license-10-2_10.2.89-1_arm64.deb
+  size: 16366
+cuda-memcheck-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-memcheck-10-2_10.2.89-1_arm64.deb
+  md5: 2ca419c2a9877ed07f09daf5b8acd051
+  name: cuda-memcheck-10-2_10.2.89-1_arm64.deb
+  size: 98994
+cuda-misc-headers-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-misc-headers-10-2_10.2.89-1_arm64.deb
+  md5: 751de9ffdaf6b35d7e182ca1cbf42b90
+  name: cuda-misc-headers-10-2_10.2.89-1_arm64.deb
+  size: 1073334
+cuda-npp-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-npp-10-2_10.2.89-1_arm64.deb
+  md5: 0886528144faf24d10c8cdfa0e5ff7b8
+  name: cuda-npp-10-2_10.2.89-1_arm64.deb
+  size: 60402570
+cuda-npp-dev-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-npp-dev-10-2_10.2.89-1_arm64.deb
+  md5: f21d60f1c5f3d1babd1c96fb34a0cac0
+  name: cuda-npp-dev-10-2_10.2.89-1_arm64.deb
+  size: 60559886
+cuda-nvcc-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-nvcc-10-2_10.2.89-1_arm64.deb
+  md5: 55b3bfa13ce83b45e8b141f19049a88d
+  name: cuda-nvcc-10-2_10.2.89-1_arm64.deb
+  size: 18589810
+cuda-nvdisasm-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-nvdisasm-10-2_10.2.89-1_arm64.deb
+  md5: 7690e14e140f225bc6b3add1f9c5cb14
+  name: cuda-nvdisasm-10-2_10.2.89-1_arm64.deb
+  size: 22094246
+cuda-nvgraph-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-nvgraph-10-2_10.2.89-1_arm64.deb
+  md5: a0de8874cbec050a0f3dbaa2465c5c5c
+  name: cuda-nvgraph-10-2_10.2.89-1_arm64.deb
+  size: 44978760
+cuda-nvgraph-dev-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-nvgraph-dev-10-2_10.2.89-1_arm64.deb
+  md5: 57b49b87d15ba6841cba7a998f7039b9
+  name: cuda-nvgraph-dev-10-2_10.2.89-1_arm64.deb
+  size: 30980098
+cuda-nvml-dev-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-nvml-dev-10-2_10.2.89-1_arm64.deb
+  md5: cd6e8fc851464d138c09b4438a4ebb38
+  name: cuda-nvml-dev-10-2_10.2.89-1_arm64.deb
+  size: 53412
+cuda-nvprof-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-nvprof-10-2_10.2.89-1_arm64.deb
+  md5: e80a13fa7cff19a2baebacc448301207
+  name: cuda-nvprof-10-2_10.2.89-1_arm64.deb
+  size: 972302
+cuda-nvprune-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-nvprune-10-2_10.2.89-1_arm64.deb
+  md5: 7755ff54496e07342201917ceea0cc13
+  name: cuda-nvprune-10-2_10.2.89-1_arm64.deb
+  size: 33424
+cuda-nvrtc-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-nvrtc-10-2_10.2.89-1_arm64.deb
+  md5: 1bc2252a7fc913e59ac2cdb6058c2655
+  name: cuda-nvrtc-10-2_10.2.89-1_arm64.deb
+  size: 5824494
+cuda-nvrtc-dev-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-nvrtc-dev-10-2_10.2.89-1_arm64.deb
+  md5: 37b8b4c42007a061828a852cc8e35d7f
+  name: cuda-nvrtc-dev-10-2_10.2.89-1_arm64.deb
+  size: 8772
+cuda-nvtx-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-nvtx-10-2_10.2.89-1_arm64.deb
+  md5: f6f70d6ae12657e09927d6e68d489912
+  name: cuda-nvtx-10-2_10.2.89-1_arm64.deb
+  size: 37668
+cuda-samples-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda-samples/cuda-samples-10-2_10.2.89-1_arm64.deb
+  md5: b68ae0f6512ef185d6a04e9eee3e7ea3
+  name: cuda-samples-10-2_10.2.89-1_arm64.deb
+  size: 62797102
+cuda-toolkit-10-2:
+  link: null
+  md5: null
+  name: null
+cuda-tools-10-2:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cuda/cuda-tools-10-2_10.2.89-1_arm64.deb
+  md5: 6bc34f5df2ff374394020170f734357e
+  name: cuda-tools-10-2_10.2.89-1_arm64.deb
+  size: 2498
+libcublas-dev:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cublas/libcublas-dev_10.2.2.89-1_arm64.deb
+  md5: fd4fc8a7bd722067ae591ed711f90c09
+  name: libcublas-dev_10.2.2.89-1_arm64.deb
+  size: 45921524
+libcublas10:
+  link: https://repo.download.nvidia.com/jetson/common/pool/main/c/cublas/libcublas10_10.2.2.89-1_arm64.deb
+  md5: 215891ec6faac714678f54003947fa83
+  name: libcublas10_10.2.2.89-1_arm64.deb
+  size: 45753836
+nvidia-cuda:
+  link: https://repo.download.nvidia.com/jetson/t194/pool/main/n/nvidia-cuda/nvidia-cuda_4.4-b186_arm64.deb
+  md5: f808c5f18cbfe63fafb5fd6ef7d653a1
+  name: nvidia-cuda_4.4-b186_arm64.deb
+  size: 28058
