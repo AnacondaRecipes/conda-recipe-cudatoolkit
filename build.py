@@ -80,10 +80,10 @@ def md5(fname):
 
 
 #######################
-### CUDA 10.2 setup ###
+### CUDA 9.2  setup ###
 #######################
 
-maj_min = '10.2'
+maj_min = '9.2'
 config = {}
 config['base_url'] = f"http://developer.download.nvidia.com/compute/cuda/{maj_min}/Prod/"
 config['installers_url_ext'] = 'local_installers/'
@@ -91,7 +91,6 @@ config['patch_url_ext'] = ''
 config['md5_url'] = f"{config['base_url']}/docs/sidebar/md5sum.txt"
 config['cuda_libraries'] = [
     'cublas',
-    'cublasLt',
     'cudart',
     'cufft',
     'cufftw',
@@ -116,6 +115,8 @@ config['cuda_libraries'] = [
     'nvrtc',
     'nvrtc-builtins',
 ]
+if not maj_min.startwwith('9.'):
+    config['cuda_libraries'].append('cublasLt')
 config['cuda_static_libraries'] = [
     'cudadevrt'
 ]
@@ -138,17 +139,25 @@ config['linux'] = {
     'libdevice_lib_fmt': 'libdevice.{0}.bc'
 }
 
-config['windows'] = {'blob': 'cuda_10.2.89_441.22_windows.exe',
+config['windows'] = {
                    'patches': [],
-                   'cuda_lib_fmt': '{0}64_10*.dll',
                    'cuda_static_lib_fmt': '{0}.lib',
                    'nvtoolsext_fmt': '{0}64_1.dll',
-                   'nvvm_lib_fmt': '{0}64_33_0.dll',
                    'libdevice_lib_fmt': 'libdevice.{0}.bc',
-                   'NvToolsExtPath' :
-                       os.path.join('c:' + os.sep, 'Program Files',
-                                    'NVIDIA Corporation', 'NVToolsExt', 'bin')
                    }
+if maj_min == '9.2':
+    config['windows']['blob'] = 'cuda_9.2.148_win10.exe'
+    config['windows']['cuda_lib_fmt'] = '{0}64_92*.dll'
+    config['windows']['nvvm_lib_fmt'] = '{0}64_32_0.dll'
+    config['windows']['NvToolsExtPath'] = os.path.join('c:' + os.sep, 'Program Files',
+                                    'NVIDIA Corporation', 'NvToolsExt', 'bin')
+else:
+    config['windows']['blob'] = 'cuda_10.2.89_441.22_windows.exe'
+    config['windows']['cuda_lib_fmt'] = '{0}64_10*.dll'
+    config['windows']['nvvm_lib_fmt'] = '{0}64_33_0.dll'
+    config['windows']['NvToolsExtPath'] = os.path.join('c:' + os.sep, 'Program Files',
+                                    'NVIDIA Corporation', 'NVToolsExt', 'bin')
+
 
 
 class Extractor(object):
@@ -238,6 +247,7 @@ class Extractor(object):
 
         # check md5 and filename match up
         check_dict = {x[0]: x[1] for x in checksums}
+        check_dict.update({x[0][:-4]: x[1] for x in checksums if x[0].endswith(".exe")})
         assert check_dict[md5sum].startswith(self.config_blob[:-7])
 
     def copy(self, *args):
@@ -328,6 +338,15 @@ class Extractor(object):
 class WindowsExtractor(Extractor):
     """The windows extractor
     """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if maj_min == "9.2":
+            self.base_url = self.base_url.replace("Prod", "Prod2")
+            self.installers_url_ext = 'local_installers2/'
+            self.md5_url = f"{self.base_url}/docs/sidebar/md5sum-d.txt"
+            self.base_url = self.base_url.replace("developer.download", "developer")
+
 
     def copy(self, *args):
         store, = args
@@ -442,8 +461,8 @@ class LinuxExtractor(Extractor):
             else:
                 # Nvidia's RHEL7 based runfiles don't use embedded runfiles
                 # Once the toolkit is extracted, it ends up in a directory called "cuda-toolkit'
-                # the --extract runfile command is used because letting the runfile do an "install" 
-                # results in attempted installs of .pc and doc files into standard Linux locations, 
+                # the --extract runfile command is used because letting the runfile do an "install"
+                # results in attempted installs of .pc and doc files into standard Linux locations,
                 # which is not what we want.
                 # The "--override" runfile command to disable the compiler check since we are not
                 # installing the driver here.
