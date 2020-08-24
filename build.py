@@ -115,7 +115,7 @@ config['cuda_libraries'] = [
     'nvrtc',
     'nvrtc-builtins',
 ]
-if not maj_min.startwwith('9.'):
+if not maj_min.startswith('9.'):
     config['cuda_libraries'].append('cublasLt')
 config['cuda_static_libraries'] = [
     'cudadevrt'
