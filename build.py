@@ -79,13 +79,13 @@ def md5(fname):
 # defined install directory) and the DLL will be taken from that location.
 
 
-#######################
-### CUDA 10.2 setup ###
-#######################
+###########################################
+### CUDA 11.0 Update 1 setup (Aug 2020) ###
+###########################################
 
-maj_min = '10.2'
+maj_min = '11.0'
 config = {}
-config['base_url'] = f"http://developer.download.nvidia.com/compute/cuda/{maj_min}/Prod/"
+config['base_url'] = f"http://developer.download.nvidia.com/compute/cuda/11.0.3/"
 config['installers_url_ext'] = 'local_installers/'
 config['patch_url_ext'] = ''
 config['md5_url'] = f"{config['base_url']}/docs/sidebar/md5sum.txt"
@@ -97,11 +97,11 @@ config['cuda_libraries'] = [
     'cufftw',
     'curand',
     'cusolver',
+    'cusolverMg',
     'cusparse',
     'nppc',
     'nppial',
     'nppicc',
-    'nppicom',
     'nppidei',
     'nppif',
     'nppig',
@@ -112,22 +112,27 @@ config['cuda_libraries'] = [
     'npps',
     'nvToolsExt',
     'nvblas',
-    'nvgraph',
+    'nvjpeg',
     'nvrtc',
     'nvrtc-builtins',
 ]
 config['cuda_static_libraries'] = [
     'cudadevrt'
 ]
-# nvjpeg is only available on linux
+# accinj64 is only available on linux
 if sys.platform.startswith('linux'):
-    config['cuda_libraries'].append('nvjpeg')
-config['libdevice_versions'] = ['10']
+    config['cuda_libraries'].append('accinj64')
+    config['cuda_libraries'].append('cuinj64')
+# cuinj is only available on windows
+if sys.platform.startswith('windows'):
+    config['cuda_libraries'].append('cuinj')
+config['libdevice_versions'] = ['11']
 
 config['linux'] = {
-    'blob': 'cuda_10.2.89_440.33.01_rhel6.run',
-    'ppc64le_blob': 'cuda_10.2.89_440.33.01_linux_ppc64le.run',
-    'embedded_blob': 'cuda-linux.10.2.89-27506705.run',
+    'blob': 'cuda_11.0.3_450.51.06_linux.run',
+    'ppc64le_blob': 'cuda_11.0.3_450.51.06_linux_ppc64le.run',
+    # CUDA 11 installer has channed, there are no embedded blobs
+    'embedded_blob': None,
     'ppc64le_embedded_blob': None,
     'patches': [],
     # need globs to handle symlinks
@@ -135,16 +140,16 @@ config['linux'] = {
     'cuda_static_lib_fmt': 'lib{0}.a',
     'nvtoolsext_fmt': 'lib{0}.so*',
     'nvvm_lib_fmt': 'lib{0}.so*',
-    'libdevice_lib_fmt': 'libdevice.{0}.bc'
+    'libdevice_lib_fmt': 'libdevice.10.bc'
 }
 
-config['windows'] = {'blob': 'cuda_10.2.89_441.22_windows.exe',
+config['windows'] = {'blob': 'cuda_11.0.3_451.82_win10.exe',
                    'patches': [],
-                   'cuda_lib_fmt': '{0}64_10*.dll',
+                   'cuda_lib_fmt': '{0}64_1*.dll',
                    'cuda_static_lib_fmt': '{0}.lib',
                    'nvtoolsext_fmt': '{0}64_1.dll',
                    'nvvm_lib_fmt': '{0}64_33_0.dll',
-                   'libdevice_lib_fmt': 'libdevice.{0}.bc',
+                   'libdevice_lib_fmt': 'libdevice.10.bc',
                    'NvToolsExtPath' :
                        os.path.join('c:' + os.sep, 'Program Files',
                                     'NVIDIA Corporation', 'NVToolsExt', 'bin')
@@ -415,15 +420,11 @@ class LinuxExtractor(Extractor):
 
     def copy(self, *args):
         basepath = args[0]
-        if self.embedded_blob is not None:
-            cudapath=''
-        else:
-            cudapath='cuda-toolkit'
         self.copy_files(
             cuda_lib_dir=os.path.join(
-                basepath, cudapath, 'lib64'), nvvm_lib_dir=os.path.join(
-                basepath, cudapath, 'nvvm', 'lib64'), libdevice_lib_dir=os.path.join(
-                basepath, cudapath, 'nvvm', 'libdevice'))
+                basepath, 'lib64'), nvvm_lib_dir=os.path.join(
+                basepath, 'nvvm', 'lib64'), libdevice_lib_dir=os.path.join(
+                basepath, 'nvvm', 'libdevice'))
 
     def extract(self):
         runfile = self.config_blob
@@ -440,21 +441,21 @@ class LinuxExtractor(Extractor):
                            '-prefix', tmpd, '-noprompt', '--nox11']
                     check_call(cmd)
             else:
-                # Nvidia's RHEL7 based runfiles don't use embedded runfiles
-                # Once the toolkit is extracted, it ends up in a directory called "cuda-toolkit'
-                # the --extract runfile command is used because letting the runfile do an "install" 
-                # results in attempted installs of .pc and doc files into standard Linux locations, 
-                # which is not what we want.
-                # The "--override" runfile command to disable the compiler check since we are not
-                # installing the driver here.
-
+                # Current Nvidia's Linux based runfiles don't use embedded runfiles
+                #
+                # "--installpath" runfile command is used to install the toolkit to a specified
+                #     directory with the contents and layout similar to an install to
+                #     '/usr/local/cuda`
+                # "--override" runfile command to disable the compiler check since we are not
+                #     installing the driver here
+                # "--nox11" runfile command prevents desktop GUI on local install
                 cmd = [os.path.join(self.src_dir, runfile),
-                       '--extract=%s' % (tmpd), '--toolkit', '--silent', '--override']
+                       '--installpath=%s' % (tmpd), '--toolkit', '--silent', '--override', '--nox11']
                 check_call(cmd)
             for p in patches:
                 os.chmod(p, 0o777)
                 cmd = [os.path.join(self.src_dir, p),
-                            '--installdir', tmpd, '--accept-eula', '--silent']
+                        '--installdir', tmpd, '--accept-eula', '--silent']
                 check_call(cmd)
             self.copy(tmpd)
 

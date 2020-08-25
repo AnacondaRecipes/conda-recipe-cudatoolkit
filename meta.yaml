@@ -1,7 +1,7 @@
 package:
    name: cudatoolkit
    # match the package version to the libcudart.so version
-   version: 10.2.89
+   version: 11.0.221
 
 source:
     path: .
@@ -11,7 +11,7 @@ source:
 # downloaded the installer
 
 build:
-  number: 1
+  number: 0
   script_env:
     - NVTOOLSEXT_INSTALL_PATH
     - DEBUG_INSTALLER_PATH
@@ -32,9 +32,26 @@ requirements:
     - tqdm
     # for run_exports
     - {{ compiler('cxx') }}
+  run_constrained:
+    - __cuda >=11.0
 
 test:
   requires:
     - numba
     - python >=3.7
     - setuptools  # for pkg_resources
+
+about:
+  home: 
+  license: NVIDIA End User License Agreement
+  license_file: NVIDIA_EULA
+  description: |
+    CUDA is a parallel computing platform and programming model developed by NVIDIA for general computing on graphical processing units (GPUs). With CUDA, developers can dramatically speed up computing applications by harnessing the power of GPUs.
+  
+    The CUDA Toolkit from NVIDIA provides everything you need to develop GPU-accelerated applications. This CUDA Toolkit includes GPU-accelerated libraries, and the CUDA runtime for the Conda ecosystem. For the full CUDA Toolkit with a compiler and development tools visit https://developer.nvidia.com/cuda-downloads
+    
+    License Agreements
+    The packages are governed by the CUDA Toolkit End User License Agreement (EULA). By downloading and using the packages, you accept the terms and conditions of the CUDA EULA - https://docs.nvidia.com/cuda/eula/index.html
+  summary: 'CUDA Toolkit - Including CUDA runtime and headers'
+  doc_url: https://docs.nvidia.com/cuda/
+  dev_url: https://developer.nvidia.com/cuda-downloads
