@@ -377,11 +377,12 @@ class WindowsExtractor(Extractor):
                                     os.path.join(path, filename),
                                     store)
                         for filename in fnmatch.filter(files, "*.lib"):
-                            if not Path(os.path.join(
-                                    store, filename)).is_file():
-                                shutil.copy(
-                                    os.path.join(path, filename),
-                                    store)
+                            if path.endswith('x64'):
+                                if not Path(os.path.join(
+                                        store, filename)).is_file():
+                                    shutil.copy(
+                                        os.path.join(path, filename),
+                                        store)
                         for filename in fnmatch.filter(files, "*.bc"):
                             if not Path(os.path.join(
                                     store, filename)).is_file():
