@@ -293,7 +293,7 @@ class Extractor(object):
             pathlist.extend(pathsforlib)
         return pathlist
 
-    def copy_files(self, cuda_lib_dir, nvvm_lib_dir, libdevice_lib_dir):
+    def copy_files(self, basepath_dir, cuda_lib_dir, nvvm_lib_dir, libdevice_lib_dir):
         """Copies the various cuda libraries and bc files to the output_dir
         """
         filepaths = []
@@ -322,6 +322,21 @@ class Extractor(object):
                 print('copying %s to %s' % (fn, self.output_dir))
                 shutil.copy(fn, self.output_dir)
 
+        # also copy in ptxas which is needed when cuda hasn't been
+        # specifically built for the target GPU as well as for
+        # TensorFlow XLA
+        bin_dir = os.path.join(self.prefix, 'bin')
+        os.makedirs(bin_dir, exist_ok=True)
+        shutil.copy(os.path.join(basepath_dir, 'bin', 'ptxas'), bin_dir)
+
+        # libdevice.10.bc should also reside in its original
+        # directory structure ($CUDA_HOME/nvvm/libdevice)
+        nvvm_libdevice_dir = os.path.join(self.prefix, 'nvvm', 'libdevice')
+        os.makedirs(nvvm_libdevice_dir, exist_ok=True)
+        for libversion in self.libdevice_versions:
+            shutil.copy(os.path.join(basepath_dir, 'nvvm', 'libdevice', self.libdevice_lib_fmt.format(libversion)), nvvm_libdevice_dir)
+        
+
     def dump_config(self):
         """Dumps the config dictionary into the output directory
         """
@@ -337,6 +352,7 @@ class WindowsExtractor(Extractor):
     def copy(self, *args):
         store, = args
         self.copy_files(
+            basepath_dir=store,
             cuda_lib_dir=store,
             nvvm_lib_dir=store,
             libdevice_lib_dir=store)
@@ -421,7 +437,7 @@ class LinuxExtractor(Extractor):
     def copy(self, *args):
         basepath = args[0]
         self.copy_files(
-            cuda_lib_dir=os.path.join(
+            basepath, cuda_lib_dir=os.path.join(
                 basepath, 'lib64'), nvvm_lib_dir=os.path.join(
                 basepath, 'nvvm', 'lib64'), libdevice_lib_dir=os.path.join(
                 basepath, 'nvvm', 'libdevice'))
