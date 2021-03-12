@@ -327,6 +327,7 @@ class Extractor(object):
         # TensorFlow XLA
         bin_dir = os.path.join(self.prefix, 'bin')
         os.makedirs(bin_dir, exist_ok=True)
+        print('copying %s to %s' % (os.path.join(basepath_dir, 'bin', 'ptxas'), bin_dir))
         shutil.copy(os.path.join(basepath_dir, 'bin', 'ptxas'), bin_dir)
 
         # libdevice.10.bc should also reside in its original
@@ -334,6 +335,7 @@ class Extractor(object):
         nvvm_libdevice_dir = os.path.join(self.prefix, 'nvvm', 'libdevice')
         os.makedirs(nvvm_libdevice_dir, exist_ok=True)
         for libversion in self.libdevice_versions:
+            print('copying %s to %s' % (os.path.join(basepath_dir, 'nvvm', 'libdevice', self.libdevice_lib_fmt.format(libversion)), nvvm_libdevice_dir))
             shutil.copy(os.path.join(basepath_dir, 'nvvm', 'libdevice', self.libdevice_lib_fmt.format(libversion)), nvvm_libdevice_dir)
         
 
