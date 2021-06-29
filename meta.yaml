@@ -1,7 +1,7 @@
 package:
    name: cudatoolkit
    # match the package version to the libcudart.so version
-   version: 11.0.221
+   version: 11.3.1
 
 source:
     path: .
@@ -11,7 +11,7 @@ source:
 # downloaded the installer
 
 build:
-  number: 0
+  number: 2
   script_env:
     - NVTOOLSEXT_INSTALL_PATH
     - DEBUG_INSTALLER_PATH
