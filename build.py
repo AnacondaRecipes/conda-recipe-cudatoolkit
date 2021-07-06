@@ -83,9 +83,9 @@ def md5(fname):
 ### CUDA 11.0 Update 1 setup (Aug 2020) ###
 ###########################################
 
-maj_min = '11.0'
+maj_min = '11.2'
 config = {}
-config['base_url'] = f"http://developer.download.nvidia.com/compute/cuda/11.0.3/"
+config['base_url'] = f"http://developer.download.nvidia.com/compute/cuda/11.2.0/"
 config['installers_url_ext'] = 'local_installers/'
 config['patch_url_ext'] = ''
 config['md5_url'] = f"{config['base_url']}/docs/sidebar/md5sum.txt"
@@ -130,7 +130,7 @@ if sys.platform.startswith('windows'):
 config['libdevice_versions'] = ['11']
 
 config['linux'] = {
-    'blob': 'cuda_11.3.1_465.19.01_linux.run',
+    'blob': 'cuda_11.2.0_460.27.04_linux.run',
     'ppc64le_blob': 'cuda_11.0.3_450.51.06_linux_ppc64le.run',
     # CUDA 11 installer has channed, there are no embedded blobs
     'embedded_blob': None,
