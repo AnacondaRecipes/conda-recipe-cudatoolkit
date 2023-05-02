@@ -1,47 +1,38 @@
-from __future__ import print_function
 import fnmatch
 import platform
 import hashlib
 import os
 import sys
 import shutil
-import tarfile
 import urllib.parse as urlparse
 import yaml
+import requests
 
-from contextlib import contextmanager
 from pathlib import Path
 from subprocess import check_call
 from tempfile import TemporaryDirectory as tempdir
-
-import requests
-from tqdm import tqdm
-import os
 
 def download_from_url(url, dst):
     """
     @param: url to download file
     @param: dst place to put the file
     """
-    file_size = int(requests.head(url).headers["Content-Length"])
-    if os.path.exists(dst):
-        first_byte = os.path.getsize(dst)
-    else:
-        first_byte = 0
-    if first_byte >= file_size:
-        return file_size
-    header = {"Range": "bytes=%s-%s" % (first_byte, file_size)}
-    pbar = tqdm(
-        total=file_size, initial=first_byte,
-        unit='B', unit_scale=True, desc=url.split('/')[-1])
-    req = requests.get(url, headers=header, stream=True)
+    # Previously we used to send a HEAD request to the URL and get the size
+    # of the file before we downloaded it - this helped with creating a nice
+    # progress bar using tqdm. But now this is broken - nvidia's servers don't
+    # respect HEAD requests return incorrect content-length; this results
+    # in incomplete files. Removing tqdm-based progress bars for now.
+    print("Downloading %s to %s" % (url, dst))
+    req = requests.get(url, stream=True)
     with(open(dst, 'ab')) as f:
         for chunk in req.iter_content(chunk_size=1024):
             if chunk:
                 f.write(chunk)
-                pbar.update(1024)
-        pbar.close()
-    return file_size
+    f.close()
+    s = os.path.getsize(dst)
+    print("File downloaded: {0}".format(dst))
+    print("File size (bytes): {0}".format(s))
+    return s
 
 def md5(fname):
     hash_md5 = hashlib.md5()
@@ -78,24 +69,25 @@ def md5(fname):
 # installation path of the CUDA toolkit's NvToolsExt location (this is not the user
 # defined install directory) and the DLL will be taken from that location.
 
-
 ###########################################
-### CUDA 11.0 Update 1 setup (Aug 2020) ###
+####### CUDA 11.8.0 setup (Oct 2022) ######
 ###########################################
 
-maj_min = '11.0'
+# Create the config object.
 config = {}
-config['base_url'] = f"http://developer.download.nvidia.com/compute/cuda/11.0.3/"
+# Package version declaration must match CUDA release version.
+# From release 11 onwards, the format major.minor.micro is always followed.
+config['version'] = os.environ['PKG_VERSION']
+config['base_url'] = "https://developer.download.nvidia.com/compute/cuda/{0}/".format(config['version'])
 config['installers_url_ext'] = 'local_installers/'
 config['patch_url_ext'] = ''
-config['md5_url'] = f"{config['base_url']}/docs/sidebar/md5sum.txt"
+config['md5_url'] = "{0}docs/sidebar/md5sum.txt".format(config['base_url'])
 config['cuda_libraries'] = [
     'cublas',
     'cublasLt',
     'cudart',
     'cufft',
     'cufftw',
-    #'cuinj',
     'curand',
     'cusolver',
     'cusolverMg',
@@ -127,14 +119,12 @@ if sys.platform.startswith('linux'):
 # cuinj is only available on windows
 if sys.platform.startswith('windows'):
     config['cuda_libraries'].append('cuinj')
-config['libdevice_versions'] = ['11']
+config['libdevice_versions'] = [config['version'].split(".")[0]]
 
 config['linux'] = {
-    'blob': 'cuda_11.3.1_465.19.01_linux.run',
-    'ppc64le_blob': 'cuda_11.0.3_450.51.06_linux_ppc64le.run',
-    # CUDA 11 installer has channed, there are no embedded blobs
-    'embedded_blob': None,
-    'ppc64le_embedded_blob': None,
+    'blob': 'cuda_11.8.0_520.61.05_linux.run',
+    'ppc64le_blob': 'cuda_11.8.0_520.61.05_linux_ppc64le.run',
+    'aarch64_blob': 'cuda_11.8.0_520.61.05_linux_sbsa.run',
     'patches': [],
     # need globs to handle symlinks
     'cuda_lib_fmt': 'lib{0}.so*',
@@ -144,18 +134,18 @@ config['linux'] = {
     'libdevice_lib_fmt': 'libdevice.10.bc'
 }
 
-config['windows'] = {'blob': 'cuda_11.0.3_451.82_win10.exe',
-                   'patches': [],
-                   'cuda_lib_fmt': '{0}64_1*.dll',
-                   'cuda_static_lib_fmt': '{0}.lib',
-                   'nvtoolsext_fmt': '{0}64_1.dll',
-                   'nvvm_lib_fmt': '{0}64_33_0.dll',
-                   'libdevice_lib_fmt': 'libdevice.10.bc',
-                   'NvToolsExtPath' :
-                       os.path.join('c:' + os.sep, 'Program Files',
-                                    'NVIDIA Corporation', 'NVToolsExt', 'bin')
-                   }
-
+config['windows'] = {
+    'blob': 'cuda_11.8.0_522.06_windows.exe',
+    'patches': [],
+    'cuda_lib_fmt': '{0}64_1*.dll',
+    'cuda_static_lib_fmt': '{0}.lib',
+    'nvtoolsext_fmt': '{0}64_1.dll',
+    'nvvm_lib_fmt': '{0}64_40_0.dll',
+    'libdevice_lib_fmt': 'libdevice.10.bc',
+    'NvToolsExtPath' :
+        os.path.join('c:' + os.sep, 'Program Files',
+                    'NVIDIA Corporation', 'NVToolsExt', 'bin')
+}
 
 class Extractor(object):
     """Extractor base class, platform specific extractors should inherit
@@ -165,14 +155,14 @@ class Extractor(object):
     libdir = {'linux': 'lib',
               'windows': 'Library/bin'}
 
-    def __init__(self, version, ver_config, plt_config):
+    def __init__(self, ver_config, plt_config):
         """Initialise an instance:
         Arguments:
           version - CUDA version string
           ver_config - the configuration for this CUDA version
           plt_config - the configuration for this platform
         """
-        self.config_version = version
+        self.config_version = ver_config['version']
         self.md5_url = ver_config['md5_url']
         self.base_url = ver_config['base_url']
         self.patch_url_ext = ver_config['patch_url_ext']
@@ -189,7 +179,7 @@ class Extractor(object):
         self.libdevice_lib_fmt = plt_config['libdevice_lib_fmt']
         self.patches = plt_config['patches']
         self.nvtoolsextpath = plt_config.get('NvToolsExtPath')
-        self.config = {'version': version, **ver_config}
+        self.config = {'version': self.config_version, **ver_config}
         self.prefix = os.environ['PREFIX']
         self.src_dir = os.environ['SRC_DIR']
         self.output_dir = os.path.join(self.prefix, self.libdir[getplatform()])
@@ -208,7 +198,6 @@ class Extractor(object):
         dl_url = urlparse.urljoin(dl_url, self.config_blob)
         dl_path = os.path.join(self.src_dir, self.config_blob)
         if not self.debug_install_path:
-            print("downloading %s to %s" % (dl_url, dl_path))
             download_from_url(dl_url, dl_path)
         else:
             existing_file = os.path.join(self.debug_install_path, self.config_blob)
@@ -220,7 +209,6 @@ class Extractor(object):
             dl_url = urlparse.urljoin(dl_url, p)
             dl_path = os.path.join(self.src_dir, p)
             if not self.debug_install_path:
-                print("downloading %s to %s" % (dl_url, dl_path))
                 download_from_url(dl_url, dl_path)
             else:
                 existing_file = os.path.join(self.debug_install_path, p)
@@ -234,17 +222,17 @@ class Extractor(object):
         path = os.path.join(self.src_dir, md5file)
         download_from_url(self.md5_url, path)
 
-        # compute hash of blob
+        # Compute hash of blob.
         blob_path = os.path.join(self.src_dir, self.config_blob)
         md5sum = md5(blob_path)
 
-        # get checksums
+        # Get checksums.
         with open(md5file, 'r') as f:
             checksums = [x.strip().split() for x in f.read().splitlines() if x]
 
-        # check md5 and filename match up
+        # Check md5 and filename match up.
         check_dict = {x[0]: x[1] for x in checksums}
-        # assert check_dict[md5sum].startswith(self.config_blob[:-7])
+        assert check_dict[md5sum].startswith(self.config_blob[:-7]), "md5sum doesn't match"
 
     def copy(self, *args):
         """The method to copy extracted files into the conda package platform
@@ -332,7 +320,7 @@ class Extractor(object):
 
 
 class WindowsExtractor(Extractor):
-    """The windows extractor
+    """The Windows extractor
     """
 
     def copy(self, *args):
@@ -365,7 +353,7 @@ class WindowsExtractor(Extractor):
                                 "or inaccessible.")
                         raise ValueError(msg)
 
-                # fetch all the dlls into DLLs
+                # Put all the dlls into a directory named 'DLLs'.
                 store_name = 'DLLs'
                 store = os.path.join(tmpd, store_name)
                 os.mkdir(store)
@@ -407,18 +395,18 @@ class WindowsExtractor(Extractor):
 
 
 class LinuxExtractor(Extractor):
-    """The linux extractor
+    """The Linux extractor
     """
 
-    def __init__(self, version, ver_config, plt_config):
+    def __init__(self, ver_config, plt_config):
         if platform.machine() == 'ppc64le':
             if plt_config.get('ppc64le_blob') is not None:
                 plt_config['blob'] = plt_config['ppc64le_blob']
             else:
-                raise RuntimeError('ppc64le not supported for %s' % version)
+                raise RuntimeError('ppc64le not supported for %s' % ver_config['version'])
             plt_config['embedded_blob'] = plt_config['ppc64le_embedded_blob']
 
-        super(LinuxExtractor, self).__init__(version, ver_config, plt_config)
+        super(LinuxExtractor, self).__init__(ver_config, plt_config)
 
     def copy(self, *args):
         basepath = args[0]
@@ -461,8 +449,6 @@ class LinuxExtractor(Extractor):
                 check_call(cmd)
             self.copy(tmpd)
 
-
-
 def getplatform():
     plt = sys.platform
     if plt.startswith('linux'):
@@ -474,32 +460,27 @@ def getplatform():
 
 dispatcher = {'linux': LinuxExtractor, 'windows': WindowsExtractor}
 
-
 def _main():
-    print("Running build")
+    print("Running build - version {0}".format(config['version']))
 
-    # package version decl must match cuda release version
-    config_version = os.environ['PKG_VERSION']
-    # keep only the major.minor version (10.0) if micro (10.0.130) is present
-    major_minor, micro = config_version.rsplit('.', 1)
-    if '.' in major_minor:
-        config_version = major_minor
-
-    # get an extractor
+    # Get an extractor
     plat = getplatform()
     extractor_impl = dispatcher[plat]
-    extractor = extractor_impl(config_version, config, config[plat])
+    extractor = extractor_impl(config, config[plat])
 
-    # download binaries
+    # Download binaries
+    print("Downloading binary blobs")
     extractor.download_blobs()
 
-    # check md5sum
+    # Check md5sum
+    print("Comparing md5 hashes")
     extractor.check_md5()
 
-    # extract
+    # Extract
+    print("Extracting files")
     extractor.extract()
 
-    # dump config
+    # Dump config
     extractor.dump_config()
 
 if __name__ == "__main__":
