@@ -11,7 +11,7 @@ source:
 # downloaded the installer.
 
 build:
-  skip: True # [s390x]
+  skip: True # [s390x or osx]
   number: 0
   script_env:
     - NVTOOLSEXT_INSTALL_PATH
