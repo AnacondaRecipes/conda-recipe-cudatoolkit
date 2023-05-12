@@ -404,7 +404,6 @@ class LinuxExtractor(Extractor):
                 plt_config['blob'] = plt_config['ppc64le_blob']
             else:
                 raise RuntimeError('ppc64le not supported for %s' % ver_config['version'])
-            plt_config['embedded_blob'] = plt_config['ppc64le_embedded_blob']
 
         super(LinuxExtractor, self).__init__(ver_config, plt_config)
 
