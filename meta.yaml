@@ -1,7 +1,7 @@
 package:
    name: cudatoolkit
    # Match the package version to the libcudart.so version.
-   version: 11.8.0
+   version: 12.3.0
 
 source:
     path: .
@@ -34,7 +34,7 @@ requirements:
     - {{ compiler('c') }}
     - {{ compiler('cxx') }}
   run_constrained:
-    - __cuda >=11.0
+    - __cuda >=12.0
 
 test:
   requires:

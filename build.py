@@ -70,7 +70,7 @@ def md5(fname):
 # defined install directory) and the DLL will be taken from that location.
 
 ###########################################
-####### CUDA 11.8.0 setup (Oct 2022) ######
+####### CUDA 12.3.0 setup (Oct 2023) ######
 ###########################################
 
 # Create the config object.
@@ -122,9 +122,9 @@ if sys.platform.startswith('windows'):
 config['libdevice_versions'] = [config['version'].split(".")[0]]
 
 config['linux'] = {
-    'blob': 'cuda_11.8.0_520.61.05_linux.run',
-    'ppc64le_blob': 'cuda_11.8.0_520.61.05_linux_ppc64le.run',
-    'aarch64_blob': 'cuda_11.8.0_520.61.05_linux_sbsa.run',
+    'blob': 'cuda_12.3.0_545.23.06_linux.run',
+    'ppc64le_blob': 'cuda_12.3.0_545.23.06_linux_ppc64le.run',
+    'aarch64_blob': 'cuda_12.3.0_545.23.06_linux_sbsa.run',
     'patches': [],
     # need globs to handle symlinks
     'cuda_lib_fmt': 'lib{0}.so*',
@@ -135,7 +135,7 @@ config['linux'] = {
 }
 
 config['windows'] = {
-    'blob': 'cuda_11.8.0_522.06_windows.exe',
+    'blob': 'cuda_12.3.0_545.84_windows.exe',
     'patches': [],
     'cuda_lib_fmt': '{0}64_1*.dll',
     'cuda_static_lib_fmt': '{0}.lib',
@@ -419,7 +419,7 @@ class LinuxExtractor(Extractor):
         runfile = self.config_blob
         patches = self.patches
         os.chmod(runfile, 0o777)
-        with tempdir() as tmpd:
+        with tempdir(dir=os.getcwd()) as tmpd:
             if self.embedded_blob is not None:
                 with tempdir() as tmpd2:
                     cmd = [os.path.join(self.src_dir, runfile),
