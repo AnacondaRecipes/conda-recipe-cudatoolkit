@@ -108,6 +108,8 @@ config['cuda_libraries'] = [
     'nvjpeg',
     'nvrtc',
     'nvrtc-builtins',
+    'nvJitLink',
+    'cupti'
 ]
 config['cuda_static_libraries'] = [
     'cudadevrt'
@@ -282,17 +284,21 @@ class Extractor(object):
             pathlist.extend(pathsforlib)
         return pathlist
 
-    def copy_files(self, cuda_lib_dir, nvvm_lib_dir, libdevice_lib_dir):
+    def copy_files(self, cuda_lib_dir, nvvm_lib_dir, libdevice_lib_dir, cupti_dir):
         """Copies the various cuda libraries and bc files to the output_dir
         """
         filepaths = []
-        # nvToolsExt is different to the rest of the cuda libraries,
+        # nvToolsExt and cupti are different to the rest of the cuda libraries,
         # it follows a different naming convention, this accommodates...
-        cudalibs = [x for x in self.cuda_libraries if x != 'nvToolsExt']
+        cudalibs = [x for x in self.cuda_libraries if x not in ('nvToolsExt', 'cupti')]
         filepaths += self.get_paths(cudalibs, cuda_lib_dir, self.cuda_lib_fmt)
         if 'nvToolsExt' in self.cuda_libraries:
             filepaths += self.get_paths(['nvToolsExt'], cuda_lib_dir,
                                         self.nvtoolsext_fmt)
+        if "cupti" in self.cuda_libraries:
+            filepaths += self.get_paths(
+                ["cupti"], cupti_dir, self.cupti_fmt
+            )
         filepaths += self.get_paths(self.cuda_static_libraries, cuda_lib_dir,
                                     self.cuda_static_lib_fmt)
         filepaths += self.get_paths(['nvvm'], nvvm_lib_dir, self.nvvm_lib_fmt)
@@ -323,12 +329,18 @@ class WindowsExtractor(Extractor):
     """The Windows extractor
     """
 
+    def __init__(self, ver_config, plt_config):
+        self.cupti_fmt = "{0}64_*.dll"
+        super().__init__(ver_config, plt_config)
+
     def copy(self, *args):
         store, = args
         self.copy_files(
             cuda_lib_dir=store,
             nvvm_lib_dir=store,
-            libdevice_lib_dir=store)
+            libdevice_lib_dir=store,
+            cupti_dir=store
+        )
 
     def extract(self):
         runfile = self.config_blob
@@ -405,15 +417,17 @@ class LinuxExtractor(Extractor):
             else:
                 raise RuntimeError('ppc64le not supported for %s' % ver_config['version'])
 
+        self.cupti_fmt = "lib{0}.so*"
         super(LinuxExtractor, self).__init__(ver_config, plt_config)
 
     def copy(self, *args):
         basepath = args[0]
         self.copy_files(
-            cuda_lib_dir=os.path.join(
-                basepath, 'lib64'), nvvm_lib_dir=os.path.join(
-                basepath, 'nvvm', 'lib64'), libdevice_lib_dir=os.path.join(
-                basepath, 'nvvm', 'libdevice'))
+            cuda_lib_dir=os.path.join(basepath, 'lib64'),
+            nvvm_lib_dir=os.path.join(basepath, 'nvvm', 'lib64'),
+            libdevice_lib_dir=os.path.join(basepath, 'nvvm', 'libdevice'),
+            cupti_dir=os.path.join(basepath, "extras", "CUPTI", "lib64")
+        )
 
     def extract(self):
         runfile = self.config_blob
