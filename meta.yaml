@@ -1,17 +1,18 @@
 package:
    name: cudatoolkit
-   # match the package version to the libcudart.so version
-   version: 11.3.1
+   # Match the package version to the libcudart.so version.
+   version: 11.8.0
 
 source:
     path: .
 
-# source downloading is done in build.py. To locally cache and point to your local file,
+# Source downloading is done in build.py. To locally cache and point to your local file,
 # set the DEBUG_INSTALLER_PATH environment variable to the folder where you have 
-# downloaded the installer
+# downloaded the installer.
 
 build:
-  number: 2
+  skip: True # [s390x or osx]
+  number: 0
   script_env:
     - NVTOOLSEXT_INSTALL_PATH
     - DEBUG_INSTALLER_PATH
@@ -26,11 +27,11 @@ build:
 requirements:
   build:
     - 7za # [win]
-    - python >=3.7
+    - python
     - pyyaml
     - requests
-    - tqdm
-    # for run_exports
+    # For run_exports
+    - {{ compiler('c') }}
     - {{ compiler('cxx') }}
   run_constrained:
     - __cuda >=11.0
@@ -38,11 +39,11 @@ requirements:
 test:
   requires:
     - numba
-    - python >=3.7
+    - python
     - setuptools  # for pkg_resources
 
 about:
-  home: 
+  home: https://developer.nvidia.com/cuda-zone
   license: NVIDIA End User License Agreement
   license_file: NVIDIA_EULA
   description: |
